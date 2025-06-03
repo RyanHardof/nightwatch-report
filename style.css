@@ -1,0 +1,190 @@
+body {
+  margin: 0;
+  font-family: 'Orbitron', sans-serif;
+  background: radial-gradient(circle at center, #0f0f1b, #000000);
+  color: #00ffff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-height: 100vh;
+  padding-top: 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+#dvd-logo {
+  position: fixed;
+  width: 80px;
+  height: auto;
+  opacity: 0.15;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.admin-btn {
+  position: fixed;
+  top: 1rem;
+  right: 1rem;
+  background: #00ffff;
+  color: #000;
+  padding: 0.5rem 1rem;
+  border: none;
+  font-size: 0.9rem;
+  border-radius: 5px;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.title-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.inline-logo {
+  height: 40px;
+  filter: drop-shadow(0 0 6px #00ffffaa);
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.inline-logo:hover {
+  transform: scale(1.15) rotate(2deg);
+  filter: drop-shadow(0 0 12px #00ffff);
+}
+
+.container {
+  background: rgba(0, 0, 0, 0.8);
+  padding: 2rem;
+  border-radius: 12px;
+  box-shadow: 0 0 30px #00ffffaa;
+  max-width: 600px;
+  width: 100%;
+  z-index: 5;
+}
+
+h1 {
+  text-align: center;
+  color: #00ffea;
+  font-size: 2.5rem;
+}
+
+.tagline {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: #88ffff;
+}
+
+.report-form {
+  display: flex;
+  flex-direction: column;
+}
+
+label {
+  margin: 0.5rem 0 0.25rem;
+  color: #ffffffcc;
+}
+
+input, textarea, select {
+  background: #101010;
+  color: #00ffff;
+  border: 1px solid #00ffff66;
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.checkbox-group {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 1rem;
+}
+
+.checkbox-group label {
+  color: #88ffff;
+  font-size: 0.95rem;
+  margin: 2px 0;
+}
+
+button {
+  background: #00ffff;
+  color: #000;
+  border: none;
+  padding: 1rem;
+  font-size: 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+button:hover {
+  background: #00b8b8;
+}
+
+.admin-panel {
+  margin-top: 2rem;
+  padding: 1rem;
+  max-width: 800px;
+  background: rgba(0, 0, 0, 0.8);
+  box-shadow: 0 0 20px #00ffff44;
+  border-radius: 8px;
+  z-index: 5;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+th, td {
+  padding: 0.75rem;
+  border: 1px solid #00ffff33;
+  text-align: left;
+}
+
+th {
+  background: #002222;
+}
+
+.hidden {
+  display: none;
+}
+.title-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  position: relative;
+  animation: flicker 4s infinite ease-in-out;
+  overflow: hidden;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 1; }
+  45%, 55% { opacity: 0.9; }
+  50% { opacity: 0.6; transform: scale(1.02); }
+}
+
+.title-logo::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-image: repeating-linear-gradient(
+    to bottom,
+    transparent 0px,
+    rgba(0,255,255,0.03) 1px,
+    transparent 2px
+  );
+  pointer-events: none;
+  animation: scanlines 2s linear infinite;
+}
+
+@keyframes scanlines {
+  0% { transform: translateY(0); }
+  100% { transform: translateY(2px); }
+}
