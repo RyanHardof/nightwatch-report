@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+  <img src="vicpol.png" alt="VicPol" id="dvd-logo" />
+  <button class="admin-btn" onclick="logout()">Logout</button>
+
+  <div class="container fade">
+    <h1 class="title-logo">
+      <img src="vicpol.png" class="inline-logo" />
+      Admin: Operation Nightwatch
+    </h1>
+
+    <label for="search">Filter by Name</label>
+    <input type="text" id="search" placeholder="Search name..." />
+
+    <table>
+      <thead>
+        <tr><th>Name</th><th>Unit</th><th>Callsign</th><th>Report ID</th><th>Charges</th><th>Time</th></tr>
+      </thead>
+      <tbody id="submissions"></tbody>
+    </table>
+  </div>
+
+  <script>
+    if (localStorage.getItem("isAdmin") !== "true") {
+      alert("Unauthorized. Redirecting...");
+      window.location.href = "index.html";
+    }
+
+    const data = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
+
+    function renderTable(records) {
+      const tbody = document.getElementById("submissions");
+      tbody.innerHTML = "";
+      records.forEach(r => {
+        const row = `<tr>
+          <td>${r.name}</td><td>${r.unit}</td><td>${r.callsign}</td>
+          <td>${r.reportId}</td><td>${r.charges}</td><td>${r.time}</td>
+        </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    document.getElementById("search").addEventListener("input", e => {
+      const term = e.target.value.toLowerCase();
+      const filtered = data.filter(d => d.name.toLowerCase().includes(term));
+      renderTable(filtered);
+    });
+
+    renderTable(data);
+
+    function logout() {
+      localStorage.removeItem("isAdmin");
+      window.location.href = "index.html";
+    }
+
+    // Reuse your bouncing logo script
+  </script>
+</body>
+</html>

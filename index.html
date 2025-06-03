@@ -11,7 +11,7 @@
   <button class="admin-btn" onclick="showLogin()">Admin Login</button>
   <img src="vicpol.png" alt="VicPol Badge" id="dvd-logo" />
 
-  <div class="container">
+  <div class="container fade">
     <h1 class="title-logo">
       <img src="vicpol.png" alt="VicPol Logo" class="inline-logo" />
       Operation Nightwatch
@@ -60,154 +60,119 @@
       <label for="datetime">Time of Incident</label>
       <input type="datetime-local" id="datetime"/>
 
-
       <button type="submit">Submit Report</button>
     </form>
   </div>
 
-  <div id="admin-panel" class="admin-panel hidden">
-    <h2>Submitted Reports</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Unit</th>
-          <th>Callsign</th>
-          <th>Report ID</th>
-          <th>Charges</th>
-          <th>Time</th>
-        </tr>
-      </thead>
-      <tbody id="submissions">
-        <!-- Populated by JS -->
-      </tbody>
-    </table>
-  </div>
-
   <script>
-  const callsignSuggestions = {
-    "General Duties": ["GD01", "GD02", "GD03"],
-    "Highway Patrol": ["HP01", "HP02", "HP03"],
-    "CIU": ["CIU-A", "CIU-B"],
-    "CIRT": ["CIRT-Alpha", "CIRT-Bravo"]
-  };
+    const callsignSuggestions = {
+      "General Duties": ["300", "301", "303", "304", "313", "334", "350", "351", "370", "371", "372", "375"],
+      "Highway Patrol": ["700", "701", "702", "703", "704", "705"],
+      "CIU": ["500", "501", "503"],
+      "CIRT": ["900", "901", "902", "903", "905"]
+    };
 
-  function updateCallsigns() {
-    const unit = document.getElementById("unit").value;
-    const datalist = document.getElementById("callsign-options");
-    const options = callsignSuggestions[unit] || [];
-    datalist.innerHTML = options.map(cs => `<option value="${cs}">`).join('');
-  }
-
-  function toggleOtherUnit() {
-    const unit = document.getElementById("unit").value;
-    const wrapper = document.getElementById("other-unit-wrapper");
-    wrapper.classList.toggle("hidden", unit !== "Other");
-  }
-
-  function toggleOtherCharge() {
-    const isChecked = document.getElementById("otherChargeBox").checked;
-    document.getElementById("otherChargeText").classList.toggle("hidden", !isChecked);
-  }
-
-  function showLogin() {
-    const password = prompt("Enter admin password:");
-    if (password === "nightwatch123") {
-      document.getElementById("admin-panel").classList.remove("hidden");
-      alert("Admin access granted.");
-    } else {
-      alert("Incorrect password.");
-    }
-  }
-
-  function handleSubmit(e) {
-    e.preventDefault();
-    const name = document.getElementById("name").value;
-    let unit = document.getElementById("unit").value;
-    if (unit === "Other") {
-      const other = document.getElementById("otherUnit").value.trim();
-      unit = other ? `Other (${other})` : "Other";
+    function updateCallsigns() {
+      const unit = document.getElementById("unit").value;
+      const datalist = document.getElementById("callsign-options");
+      const options = callsignSuggestions[unit] || [];
+      datalist.innerHTML = options.map(cs => `<option value="${cs}">`).join('');
     }
 
-    const callsign = document.getElementById("callsign").value;
-    const reportId = document.getElementById("reportId").value;
-    const time = document.getElementById("datetime").value;
-
-    let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked'))
-                       .map(cb => cb.value);
-    const customCharge = document.getElementById("otherChargeText").value.trim();
-    if (charges.includes("Other") && customCharge) {
-      charges = charges.filter(c => c !== "Other");
-      charges.push(customCharge);
-    }
-    charges = charges.join(', ') || '-';
-
-    const entry = { name, unit, callsign, reportId, charges, time };
-    addToTable(entry);
-    saveToLocal(entry);
-
-    alert("Thank you for your submission.");
-    e.target.reset();
-    document.getElementById("callsign-options").innerHTML = '';
-    toggleOtherUnit();
-    toggleOtherCharge();
-  }
-
-  function addToTable(data) {
-    const row = document.createElement("tr");
-    row.innerHTML = `<td>${data.name}</td><td>${data.unit}</td><td>${data.callsign}</td><td>${data.reportId}</td><td>${data.charges}</td><td>${data.time}</td>`;
-    document.getElementById("submissions").appendChild(row);
-  }
-
-  function saveToLocal(entry) {
-    const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
-    records.push(entry);
-    localStorage.setItem("nightwatchReports", JSON.stringify(records));
-  }
-
-  function loadFromLocal() {
-    const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
-    records.forEach(addToTable);
-  }
-
-  window.addEventListener("DOMContentLoaded", () => {
-    loadFromLocal();
-    moveLogo();
-  });
-
-  // --- Bouncing VicPol logo ---
-  const dvdLogo = document.getElementById('dvd-logo');
-  const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
-  let dx = 1.5, dy = 1.5, x = 100, y = 100;
-
-  function moveLogo() {
-    const screenW = window.innerWidth;
-    const screenH = window.innerHeight;
-    const logoW = dvdLogo.offsetWidth;
-    const logoH = dvdLogo.offsetHeight;
-
-    x += dx;
-    y += dy;
-
-    let hitEdge = false;
-    if (x + logoW >= screenW || x <= 0) {
-      dx *= -1;
-      hitEdge = true;
-    }
-    if (y + logoH >= screenH || y <= 0) {
-      dy *= -1;
-      hitEdge = true;
+    function toggleOtherUnit() {
+      const unit = document.getElementById("unit").value;
+      const wrapper = document.getElementById("other-unit-wrapper");
+      wrapper.classList.toggle("hidden", unit !== "Other");
     }
 
-    if (hitEdge) {
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
+    function toggleOtherCharge() {
+      const isChecked = document.getElementById("otherChargeBox").checked;
+      document.getElementById("otherChargeText").classList.toggle("hidden", !isChecked);
     }
 
-    dvdLogo.style.left = x + 'px';
-    dvdLogo.style.top = y + 'px';
-    requestAnimationFrame(moveLogo);
-  }
-</script>
+    function showLogin() {
+      const password = prompt("Enter admin password:");
+      if (password === "nightwatch123") {
+        localStorage.setItem("isAdmin", "true");
+        document.querySelector('.fade').classList.add("fade-out");
+        setTimeout(() => {
+          window.location.href = "admin.html";
+        }, 700);
+      } else {
+        alert("Incorrect password.");
+      }
+    }
+
+    function handleSubmit(e) {
+      e.preventDefault();
+      let unit = document.getElementById("unit").value;
+      if (unit === "Other") {
+        const other = document.getElementById("otherUnit").value.trim();
+        unit = other ? `Other (${other})` : "Other";
+      }
+
+      let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked'))
+                         .map(cb => cb.value);
+      const custom = document.getElementById("otherChargeText").value.trim();
+      if (charges.includes("Other") && custom) {
+        charges = charges.filter(c => c !== "Other");
+        charges.push(custom);
+      }
+
+      const entry = {
+        name: document.getElementById("name").value,
+        unit,
+        callsign: document.getElementById("callsign").value,
+        reportId: document.getElementById("reportId").value,
+        charges: charges.join(", "),
+        time: document.getElementById("datetime").value
+      };
+
+      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
+      records.push(entry);
+      localStorage.setItem("nightwatchReports", JSON.stringify(records));
+      alert("Thank you for your submission.");
+      e.target.reset();
+      updateCallsigns();
+      toggleOtherUnit();
+      toggleOtherCharge();
+    }
+
+    // VicPol bouncing DVD logo
+    const dvdLogo = document.getElementById('dvd-logo');
+    const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
+    let dx = 1.5, dy = 1.5, x = 100, y = 100;
+
+    function moveLogo() {
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+      const logoW = dvdLogo.offsetWidth;
+      const logoH = dvdLogo.offsetHeight;
+
+      x += dx;
+      y += dy;
+
+      let hitEdge = false;
+      if (x + logoW >= screenW || x <= 0) {
+        dx *= -1;
+        hitEdge = true;
+      }
+      if (y + logoH >= screenH || y <= 0) {
+        dy *= -1;
+        hitEdge = true;
+      }
+
+      if (hitEdge) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
+      }
+
+      dvdLogo.style.left = x + 'px';
+      dvdLogo.style.top = y + 'px';
+      requestAnimationFrame(moveLogo);
+    }
+
+    window.addEventListener("DOMContentLoaded", moveLogo);
+  </script>
 </body>
 </html>
