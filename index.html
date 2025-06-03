@@ -18,7 +18,7 @@
     </h1>
     <p class="tagline">State Highway Patrol</p>
 
-    <form class="report-form" onsubmit="handleSubmit(event)">
+    <form id="reportForm">
       <label for="name">Your Name</label>
       <input type="text" id="name" required placeholder="Full name"/>
 
@@ -92,15 +92,13 @@
       if (password === "nightwatch123") {
         localStorage.setItem("isAdmin", "true");
         document.querySelector('.fade').classList.add("fade-out");
-        setTimeout(() => {
-          window.location.href = "admin.html";
-        }, 700);
+        setTimeout(() => window.location.href = "admin.html", 600);
       } else {
         alert("Incorrect password.");
       }
     }
 
-    function handleSubmit(e) {
+    document.getElementById("reportForm").addEventListener("submit", function(e) {
       e.preventDefault();
       let unit = document.getElementById("unit").value;
       if (unit === "Other") {
@@ -108,8 +106,7 @@
         unit = other ? `Other (${other})` : "Other";
       }
 
-      let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked'))
-                         .map(cb => cb.value);
+      let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked')).map(cb => cb.value);
       const custom = document.getElementById("otherChargeText").value.trim();
       if (charges.includes("Other") && custom) {
         charges = charges.filter(c => c !== "Other");
@@ -121,8 +118,7 @@
         unit,
         callsign: document.getElementById("callsign").value,
         reportId: document.getElementById("reportId").value,
-        charges: charges.join(", "),
-        time: document.getElementById("datetime").value
+        charges: charges.join(", ")
       };
 
       const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
@@ -133,42 +129,29 @@
       updateCallsigns();
       toggleOtherUnit();
       toggleOtherCharge();
-    }
+    });
 
-    // VicPol bouncing DVD logo
+    // DVD logo bounce
     const dvdLogo = document.getElementById('dvd-logo');
     const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
     let dx = 1.5, dy = 1.5, x = 100, y = 100;
-
     function moveLogo() {
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
       const logoW = dvdLogo.offsetWidth;
       const logoH = dvdLogo.offsetHeight;
-
       x += dx;
       y += dy;
-
-      let hitEdge = false;
-      if (x + logoW >= screenW || x <= 0) {
-        dx *= -1;
-        hitEdge = true;
-      }
-      if (y + logoH >= screenH || y <= 0) {
-        dy *= -1;
-        hitEdge = true;
-      }
-
-      if (hitEdge) {
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
-      }
-
+      if (x + logoW >= screenW || x <= 0) { dx *= -1; glow(); }
+      if (y + logoH >= screenH || y <= 0) { dy *= -1; glow(); }
       dvdLogo.style.left = x + 'px';
       dvdLogo.style.top = y + 'px';
       requestAnimationFrame(moveLogo);
     }
-
+    function glow() {
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
+    }
     window.addEventListener("DOMContentLoaded", moveLogo);
   </script>
 </body>
