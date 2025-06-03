@@ -18,7 +18,7 @@
     </h1>
     <p class="tagline">State Highway Patrol</p>
 
-    <form class="report-form" onsubmit="handleSubmit(event)">
+    <form id="reportForm">
       <label for="name">Your Name</label>
       <input type="text" id="name" required placeholder="Full name"/>
 
@@ -38,24 +38,26 @@
       </div>
 
       <label for="callsign">Your Callsign</label>
-      <input type="text" id="callsign" required list="callsign-options" placeholder="Start typing your callsign"/>
+      <input type="text" id="callsign" required list="callsign-options"/>
       <datalist id="callsign-options"></datalist>
 
       <label for="reportId">Report ID</label>
-      <input type="text" id="reportId" required placeholder="Unique report ID"/>
+      <input type="text" id="reportId" required />
 
       <label>Charges (select all that apply)</label>
       <div class="checkbox-group">
         <label><input type="checkbox" name="charges" value="Exceeding Speed"> Exceeding Speed</label>
         <label><input type="checkbox" name="charges" value="DUI"> DUI</label>
         <label><input type="checkbox" name="charges" value="Un-Roadworthy"> Un-Roadworthy</label>
-        <label><input type="checkbox" name="charges" value="Evade - Failure to stop when directed"> Evade - Failure to stop when directed</label>
+        <label><input type="checkbox" name="charges" value="Evade"> Evade</label>
         <label>
-          <input type="checkbox" id="otherChargeBox" name="charges" value="Other" onchange="toggleOtherCharge()">
-          Other
+          <input type="checkbox" id="otherChargeBox" name="charges" value="Other" onchange="toggleOtherCharge()"> Other
         </label>
         <input type="text" id="otherChargeText" class="hidden" placeholder="Enter custom charge(s)"/>
       </div>
+
+      <label for="datetime">Time of Incident</label>
+      <input type="datetime-local" id="datetime"/>
 
       <button type="submit">Submit Report</button>
     </form>
@@ -63,10 +65,10 @@
 
   <script>
     const callsignSuggestions = {
-      "General Duties": ["300", "301", "303", "304", "313", "334", "350", "351", "370", "371", "372", "375"],
-      "Highway Patrol": ["700", "701", "702", "703", "704", "705"],
-      "CIU": ["500", "501", "503"],
-      "CIRT": ["900", "901", "902", "903", "905"]
+      "General Duties": ["GD01", "GD02", "GD03"],
+      "Highway Patrol": ["HP01", "HP02", "HP03"],
+      "CIU": ["CIU-A", "CIU-B"],
+      "CIRT": ["CIRT-Alpha", "CIRT-Bravo"]
     };
 
     function updateCallsigns() {
@@ -92,15 +94,13 @@
       if (password === "nightwatch123") {
         localStorage.setItem("isAdmin", "true");
         document.querySelector('.fade').classList.add("fade-out");
-        setTimeout(() => {
-          window.location.href = "admin.html";
-        }, 700);
+        setTimeout(() => window.location.href = "admin.html", 600);
       } else {
         alert("Incorrect password.");
       }
     }
 
-    function handleSubmit(e) {
+    document.getElementById("reportForm").addEventListener("submit", function(e) {
       e.preventDefault();
       let unit = document.getElementById("unit").value;
       if (unit === "Other") {
@@ -108,8 +108,7 @@
         unit = other ? `Other (${other})` : "Other";
       }
 
-      let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked'))
-                         .map(cb => cb.value);
+      let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked')).map(cb => cb.value);
       const custom = document.getElementById("otherChargeText").value.trim();
       if (charges.includes("Other") && custom) {
         charges = charges.filter(c => c !== "Other");
@@ -133,42 +132,29 @@
       updateCallsigns();
       toggleOtherUnit();
       toggleOtherCharge();
-    }
+    });
 
-    // VicPol bouncing DVD logo
+    // VicPol logo bounce
     const dvdLogo = document.getElementById('dvd-logo');
     const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
     let dx = 1.5, dy = 1.5, x = 100, y = 100;
-
     function moveLogo() {
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
       const logoW = dvdLogo.offsetWidth;
       const logoH = dvdLogo.offsetHeight;
-
       x += dx;
       y += dy;
-
-      let hitEdge = false;
-      if (x + logoW >= screenW || x <= 0) {
-        dx *= -1;
-        hitEdge = true;
-      }
-      if (y + logoH >= screenH || y <= 0) {
-        dy *= -1;
-        hitEdge = true;
-      }
-
-      if (hitEdge) {
-        const color = colors[Math.floor(Math.random() * colors.length)];
-        dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
-      }
-
+      if (x + logoW >= screenW || x <= 0) { dx *= -1; glow(); }
+      if (y + logoH >= screenH || y <= 0) { dy *= -1; glow(); }
       dvdLogo.style.left = x + 'px';
       dvdLogo.style.top = y + 'px';
       requestAnimationFrame(moveLogo);
     }
-
+    function glow() {
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
+    }
     window.addEventListener("DOMContentLoaded", moveLogo);
   </script>
 </body>
