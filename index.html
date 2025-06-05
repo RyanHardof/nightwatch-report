@@ -6,10 +6,38 @@
   <title>Operation Nightwatch - Report</title>
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <style>
+    /* Style the Google Sign-In area to match your admin button */
+    .google-signin-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 1em 0;
+    }
+    .google-signin-container .g_id_signin {
+      min-width: 220px;
+      margin-bottom: 1em;
+    }
+    /* Optional: visually match your admin-btn */
+    .google-signin-container .g_id_signin > div {
+      border-radius: 6px !important;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      font-family: inherit;
+    }
+  </style>
 </head>
 <body>
   <button class="admin-btn" onclick="showLogin()">Admin Login</button>
   <img src="vicpol.png" alt="VicPol Badge" id="dvd-logo" />
+
+  <div id="admin-login-popup" class="hidden">
+    <div class="login-box">
+      <h3>Admin Login</h3>
+      <input type="password" id="admin-pass" placeholder="Enter password" />
+      <button onclick="verifyAdmin()">Login</button>
+      <button onclick="hideLogin()">Cancel</button>
+    </div>
+  </div>
 
   <div class="container fade">
     <h1 class="title-logo">
@@ -59,9 +87,17 @@
 
       <button type="submit">Submit Report</button>
     </form>
+    <div id="locked-message" class="hidden" style="text-align:center; font-size:1.2em; margin-top:2em;">
+      Thank you for being a part of Operation Nightwatch. It has come to an end.
+    </div>
   </div>
 
   <script>
+    // --- CONFIGURATION ---
+    // Set cutoff date/time in AEST (UTC+10)
+    const AEST_CUTOFF = "2024-06-05T14:07:00+10:00"; // <-- Set your cutoff here
+    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1378949615872901230/fXcBimVh4TFXZzEnfR4o_pcZuFm6B3ufO53pJJ0lAUG5X435BBP8BsLcRwOtzDcgJPK8/your_webhook_url_here"; // Replace with your webhook
+
     const callsignSuggestions = {
       "General Duties": ["300", "301", "303", "304", "313", "334", "350", "351", "370", "371", "372", "375"],
       "Highway Patrol": ["700", "701", "702", "703", "704", "705"],
@@ -88,18 +124,31 @@
     }
 
     function showLogin() {
-      const password = prompt("Enter admin password:");
+      document.getElementById("admin-login-popup").classList.remove("hidden");
+    }
+
+    function hideLogin() {
+      document.getElementById("admin-login-popup").classList.add("hidden");
+      document.getElementById("admin-pass").value = '';
+    }
+
+    function verifyAdmin() {
+      const password = document.getElementById("admin-pass").value;
       if (password === "nightwatch123") {
         localStorage.setItem("isAdmin", "true");
-        document.querySelector('.fade').classList.add("fade-out");
-        setTimeout(() => window.location.href = "admin.html", 600);
+        window.location.href = "admin.html";
       } else {
         alert("Incorrect password.");
       }
     }
 
     document.getElementById("reportForm").addEventListener("submit", function(e) {
-      e.preventDefault();
+      if (localStorage.getItem("nightwatchLocked") === "true") {
+        alert("Submissions are currently locked by admin.");
+        e.preventDefault();
+        return;
+      }
+
       let unit = document.getElementById("unit").value;
       if (unit === "Other") {
         const other = document.getElementById("otherUnit").value.trim();
@@ -131,10 +180,69 @@
       toggleOtherCharge();
     });
 
-    // DVD logo bounce
+    function checkSubmissionLock() {
+      const locked = localStorage.getItem("nightwatchLocked") === "true";
+      const form = document.getElementById("reportForm");
+      const msg = document.getElementById("locked-message");
+      if (locked) {
+        form.style.display = "none";
+        msg.classList.remove("hidden");
+      } else {
+        form.style.display = "";
+        msg.classList.add("hidden");
+      }
+    }
+
+    // --- WINNER ANNOUNCEMENT LOGIC ---
+    function announceWinnerIfDue() {
+      // Use the cutoff as an absolute time with offset, compare to now
+      const now = new Date();
+      const cutoff = new Date(AEST_CUTOFF);
+
+      if (now < cutoff) return;
+
+      // Prevent duplicate announcements
+      if (localStorage.getItem("nightwatchWinnerAnnounced")) return;
+
+      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
+      if (!records.length) return;
+
+      // Count submissions per user (by name)
+      const counts = {};
+      records.forEach(r => {
+        const name = r.name.trim();
+        counts[name] = (counts[name] || 0) + 1;
+      });
+
+      // Find the user with the most submissions
+      let winner = null, max = 0;
+      for (const [name, count] of Object.entries(counts)) {
+        if (count > max) {
+          winner = name;
+          max = count;
+        }
+      }
+
+      if (!winner) return;
+
+      // Send to Discord webhook
+      fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          content: `🏆 Nightwatch Winner: **${winner}** with **${max}** submissions!`
+        })
+      }).then(() => {
+        localStorage.setItem("nightwatchWinnerAnnounced", "true");
+      }).catch(() => {
+        // Optionally handle errors
+      });
+    }
+
     const dvdLogo = document.getElementById('dvd-logo');
     const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
     let dx = 1.5, dy = 1.5, x = 100, y = 100;
+
     function moveLogo() {
       const screenW = window.innerWidth;
       const screenH = window.innerHeight;
@@ -142,17 +250,32 @@
       const logoH = dvdLogo.offsetHeight;
       x += dx;
       y += dy;
-      if (x + logoW >= screenW || x <= 0) { dx *= -1; glow(); }
-      if (y + logoH >= screenH || y <= 0) { dy *= -1; glow(); }
+
+      const atCorner =
+        (x <= 0 || x + logoW >= screenW) &&
+        (y <= 0 || y + logoH >= screenH);
+
+      const hitEdge = x + logoW >= screenW || x <= 0 || y + logoH >= screenH || y <= 0;
+
+      if (x + logoW >= screenW || x <= 0) dx *= -1;
+      if (y + logoH >= screenH || y <= 0) dy *= -1;
+
+      if (hitEdge) {
+        dvdLogo.style.filter = atCorner
+          ? `drop-shadow(0 0 30px gold)`
+          : `drop-shadow(0 0 15px ${colors[Math.floor(Math.random() * colors.length)]})`;
+      }
+
       dvdLogo.style.left = x + 'px';
       dvdLogo.style.top = y + 'px';
       requestAnimationFrame(moveLogo);
     }
-    function glow() {
-      const color = colors[Math.floor(Math.random() * colors.length)];
-      dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
-    }
-    window.addEventListener("DOMContentLoaded", moveLogo);
+
+    window.addEventListener("DOMContentLoaded", () => {
+      moveLogo();
+      announceWinnerIfDue();
+      checkSubmissionLock();
+    });
   </script>
 </body>
 </html>
