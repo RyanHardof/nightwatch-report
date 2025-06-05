@@ -17,6 +17,11 @@
       Admin: Operation Nightwatch
     </h1>
 
+    <button class="admin-btn" id="lock-btn" onclick="toggleLockSubmissions()">Lock Submissions</button>
+    <span id="lock-status" style="margin-left:10px;"></span>
+
+    <div id="submission-leaderboard" style="margin: 20px 0;"></div>
+
     <label for="search">Filter by Name</label>
     <input type="text" id="search" placeholder="Start typing a name..." />
 
@@ -28,7 +33,6 @@
           <th>Callsign</th>
           <th>Report ID</th>
           <th>Charges</th>
-          <th>Time</th>
           <th>Delete</th>
         </tr>
       </thead>
@@ -57,7 +61,6 @@
           <td>${entry.callsign}</td>
           <td>${entry.reportId}</td>
           <td>${entry.charges}</td>
-          <td>${entry.time}</td>
           <td><button onclick="deleteEntry(${index})">❌</button></td>
         `;
         tbody.appendChild(row);
@@ -80,6 +83,139 @@
     function logout() {
       localStorage.removeItem("isAdmin");
       window.location.href = "index.html";
+    }
+
+    function toggleLockSubmissions() {
+      const locked = localStorage.getItem("nightwatchLocked") === "true";
+      if (locked) {
+        localStorage.setItem("nightwatchLocked", "false");
+        alert("Submissions have been unlocked.");
+        document.getElementById("submission-leaderboard").innerHTML = "";
+      } else {
+        localStorage.setItem("nightwatchLocked", "true");
+        showSubmissionLeaderboard();
+        alert("Submissions have been locked.");
+      }
+      updateLockStatus();
+    }
+
+    function updateLockStatus() {
+      const locked = localStorage.getItem("nightwatchLocked") === "true";
+      const status = document.getElementById("lock-status");
+      const btn = document.getElementById("lock-btn");
+      if (locked) {
+        status.textContent = "Submissions are LOCKED";
+        status.style.color = "red";
+        btn.textContent = "Unlock Submissions";
+      } else {
+        status.textContent = "Submissions are OPEN";
+        status.style.color = "green";
+        btn.textContent = "Lock Submissions";
+      }
+    }
+
+    function showSubmissionLeaderboard() {
+      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
+      if (!records.length) {
+        document.getElementById("submission-leaderboard").innerHTML = "<b>No submissions found.</b>";
+        return;
+      }
+
+      const counts = {};
+      const details = {};
+      records.forEach(r => {
+        const name = r.name.trim();
+        counts[name] = (counts[name] || 0) + 1;
+        details[name] = { callsign: r.callsign, unit: r.unit };
+      });
+
+      const sorted = Object.entries(counts)
+        .map(([name, count]) => ({
+          name,
+          count,
+          callsign: details[name].callsign,
+          unit: details[name].unit
+        }))
+        .sort((a, b) => b.count - a.count);
+
+      // Medal colors for top 3
+      const medalColors = [
+        "linear-gradient(90deg, gold 60%, #fffbe6 100%)",    // Gold
+        "linear-gradient(90deg, #c0c0c0 60%, #f8f8f8 100%)", // Silver
+        "linear-gradient(90deg, #cd7f32 60%, #ffe0b3 100%)"  // Bronze
+      ];
+
+      let html = `<h3>Submission Leaderboard</h3>
+        <table style="margin:auto;min-width:300px;">
+          <thead>
+            <tr>
+              <th>Rank</th>
+              <th>Name</th>
+              <th>Callsign</th>
+              <th>Unit</th>
+              <th>Submissions</th>
+            </tr>
+          </thead>
+          <tbody>`;
+      sorted.forEach((entry, idx) => {
+        let logo = "";
+        if (idx < 3) {
+          logo = `<img src="vicpol.png" alt="VicPol" style="height:22px;vertical-align:middle;margin-right:6px;filter: drop-shadow(0 0 2px #000);background: ${medalColors[idx]};border-radius:50%;padding:2px;">`;
+        }
+        html += `<tr>
+          <td>${idx + 1}</td>
+          <td>${logo}${entry.name}</td>
+          <td>${entry.callsign}</td>
+          <td>${entry.unit}</td>
+          <td>${entry.count}</td>
+        </tr>`;
+      });
+      html += `</tbody></table>`;
+
+      document.getElementById("submission-leaderboard").innerHTML = html;
+    }
+
+    // --- Send winner to Discord webhook ---
+    function sendWinnerToDiscord() {
+      const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1378949615872901230/fXcBimVh4TFXZzEnfR4o_pcZuFm6B3ufO53pJJ0lAUG5X435BBP8BsLcRwOtzDcgJPK8/your_webhook_url_here"; // Replace with your webhook
+      // Always get the latest reports from localStorage
+      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
+      if (!records.length) return;
+
+      // Count submissions per user (by name)
+      const counts = {};
+      const details = {};
+      records.forEach(r => {
+        const name = r.name.trim();
+        counts[name] = (counts[name] || 0) + 1;
+        // Store the latest callsign and unit for the user
+        details[name] = { callsign: r.callsign, unit: r.unit };
+      });
+
+      // Find the user with the most submissions
+      let winner = null, max = 0;
+      for (const [name, count] of Object.entries(counts)) {
+        if (count > max) {
+          winner = name;
+          max = count;
+        }
+      }
+      if (!winner) return;
+
+      const winnerDetails = details[winner];
+      const msg =
+        `🏆 Nightwatch Winner: **${winner}**\n` +
+        `Callsign: **${winnerDetails.callsign}**\n` +
+        `Unit: **${winnerDetails.unit}**\n` +
+        `Submissions: **${max}**`;
+
+      fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: msg })
+      }).catch(() => {
+        // Optionally handle errors
+      });
     }
 
     renderTable(reports);
@@ -118,7 +254,10 @@
       requestAnimationFrame(moveLogo);
     }
 
-    window.addEventListener("DOMContentLoaded", moveLogo);
+    window.addEventListener("DOMContentLoaded", () => {
+      moveLogo();
+      updateLockStatus();
+    });
   </script>
 </body>
 </html>
