@@ -17,13 +17,10 @@
       Admin: Operation Nightwatch
     </h1>
 
-    <button class="admin-btn" id="lock-btn" onclick="toggleLockSubmissions()">Lock Submissions</button>
-    <span id="lock-status" style="margin-left:10px;"></span>
-
-    <div id="submission-leaderboard" style="margin: 20px 0;"></div>
-
     <label for="search">Filter by Name</label>
     <input type="text" id="search" placeholder="Start typing a name..." />
+
+    <div id="submission-leaderboard" style="margin:20px 0;"></div>
 
     <table>
       <thead>
@@ -42,185 +39,123 @@
     </table>
   </div>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"></script>
+
   <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxMzG3KNy-9r6o_3gRl89fRSF5UC_zwDE",
+      authDomain: "nightwatch-95d9e.firebaseapp.com",
+      projectId: "nightwatch-95d9e",
+      storageBucket: "nightwatch-95d9e.firebasestorage.app",
+      messagingSenderId: "333759908706",
+      appId: "1:333759908706:web:1f745e0329935447157a3b",
+      measurementId: "G-HSSE2TH61J"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
     if (localStorage.getItem("isAdmin") !== "true") {
       alert("Unauthorized. Redirecting...");
       window.location.href = "index.html";
     }
 
-    let reports = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
+    let reports = [];
+
+    async function loadReports() {
+      const snapshot = await db.collection("reports").orderBy("timestamp", "desc").get();
+      reports = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      renderTable(reports);
+      renderLeaderboard(reports);
+    }
 
     function renderTable(data) {
       const tbody = document.getElementById("submissions");
       tbody.innerHTML = "";
-      data.forEach((entry, index) => {
+      data.forEach(report => {
         const row = document.createElement("tr");
         row.innerHTML = `
-          <td>${entry.name}</td>
-          <td>${entry.unit}</td>
-          <td>${entry.callsign}</td>
-          <td>${entry.reportId}</td>
-          <td>${entry.charges}</td>
-          <td><button onclick="deleteEntry(${index})">❌</button></td>
+          <td>${report.name}</td>
+          <td>${report.unit}</td>
+          <td>${report.callsign}</td>
+          <td>${report.reportId}</td>
+          <td>${report.charges}</td>
+          <td><button onclick="deleteReport('${report.id}')">❌</button></td>
         `;
         tbody.appendChild(row);
       });
     }
 
-    function deleteEntry(index) {
-      if (!confirm("Are you sure you want to delete this report?")) return;
-      reports.splice(index, 1);
-      localStorage.setItem("nightwatchReports", JSON.stringify(reports));
+    async function deleteReport(id) {
+      if (!confirm("Delete this report?")) return;
+      await db.collection("reports").doc(id).delete();
+      reports = reports.filter(r => r.id !== id);
       renderTable(reports);
+      renderLeaderboard(reports);
     }
-
-    document.getElementById("search").addEventListener("input", e => {
-      const term = e.target.value.toLowerCase();
-      const filtered = reports.filter(d => d.name.toLowerCase().includes(term));
-      renderTable(filtered);
-    });
 
     function logout() {
       localStorage.removeItem("isAdmin");
       window.location.href = "index.html";
     }
 
-    function toggleLockSubmissions() {
-      const locked = localStorage.getItem("nightwatchLocked") === "true";
-      if (locked) {
-        localStorage.setItem("nightwatchLocked", "false");
-        alert("Submissions have been unlocked.");
-        document.getElementById("submission-leaderboard").innerHTML = "";
-      } else {
-        localStorage.setItem("nightwatchLocked", "true");
-        showSubmissionLeaderboard();
-        alert("Submissions have been locked.");
-      }
-      updateLockStatus();
-    }
+    document.getElementById("search").addEventListener("input", e => {
+      const term = e.target.value.toLowerCase();
+      const filtered = reports.filter(r => r.name.toLowerCase().includes(term));
+      renderTable(filtered);
+    });
 
-    function updateLockStatus() {
-      const locked = localStorage.getItem("nightwatchLocked") === "true";
-      const status = document.getElementById("lock-status");
-      const btn = document.getElementById("lock-btn");
-      if (locked) {
-        status.textContent = "Submissions are LOCKED";
-        status.style.color = "red";
-        btn.textContent = "Unlock Submissions";
-      } else {
-        status.textContent = "Submissions are OPEN";
-        status.style.color = "green";
-        btn.textContent = "Lock Submissions";
-      }
-    }
-
-    function showSubmissionLeaderboard() {
-      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
-      if (!records.length) {
-        document.getElementById("submission-leaderboard").innerHTML = "<b>No submissions found.</b>";
-        return;
-      }
-
+    function renderLeaderboard(data) {
+      const leaderboardEl = document.getElementById("submission-leaderboard");
       const counts = {};
       const details = {};
-      records.forEach(r => {
+
+      data.forEach(r => {
         const name = r.name.trim();
         counts[name] = (counts[name] || 0) + 1;
         details[name] = { callsign: r.callsign, unit: r.unit };
       });
 
-      const sorted = Object.entries(counts)
-        .map(([name, count]) => ({
-          name,
-          count,
-          callsign: details[name].callsign,
-          unit: details[name].unit
-        }))
-        .sort((a, b) => b.count - a.count);
+      const sorted = Object.entries(counts).map(([name, count]) => ({
+        name,
+        count,
+        callsign: details[name].callsign,
+        unit: details[name].unit
+      })).sort((a, b) => b.count - a.count);
 
-      // Medal colors for top 3
       const medalColors = [
-        "linear-gradient(90deg, gold 60%, #fffbe6 100%)",    // Gold
-        "linear-gradient(90deg, #c0c0c0 60%, #f8f8f8 100%)", // Silver
-        "linear-gradient(90deg, #cd7f32 60%, #ffe0b3 100%)"  // Bronze
+        "linear-gradient(90deg, gold 60%, #fffbe6 100%)",
+        "linear-gradient(90deg, #c0c0c0 60%, #f8f8f8 100%)",
+        "linear-gradient(90deg, #cd7f32 60%, #ffe0b3 100%)"
       ];
 
       let html = `<h3>Submission Leaderboard</h3>
-        <table style="margin:auto;min-width:300px;">
-          <thead>
-            <tr>
-              <th>Rank</th>
-              <th>Name</th>
-              <th>Callsign</th>
-              <th>Unit</th>
-              <th>Submissions</th>
-            </tr>
-          </thead>
-          <tbody>`;
-      sorted.forEach((entry, idx) => {
-        let logo = "";
-        if (idx < 3) {
-          logo = `<img src="vicpol.png" alt="VicPol" style="height:22px;vertical-align:middle;margin-right:6px;filter: drop-shadow(0 0 2px #000);background: ${medalColors[idx]};border-radius:50%;padding:2px;">`;
-        }
+      <table style="margin:auto;min-width:300px;">
+        <thead>
+          <tr>
+            <th>Rank</th><th>Name</th><th>Callsign</th><th>Unit</th><th>Submissions</th>
+          </tr>
+        </thead><tbody>`;
+
+      sorted.forEach((entry, i) => {
+        const badge = i < 3
+          ? `<img src="vicpol.png" style="height:22px;border-radius:50%;background:${medalColors[i]};margin-right:6px;">`
+          : "";
         html += `<tr>
-          <td>${idx + 1}</td>
-          <td>${logo}${entry.name}</td>
+          <td>${i + 1}</td>
+          <td>${badge}${entry.name}</td>
           <td>${entry.callsign}</td>
           <td>${entry.unit}</td>
           <td>${entry.count}</td>
         </tr>`;
       });
+
       html += `</tbody></table>`;
-
-      document.getElementById("submission-leaderboard").innerHTML = html;
+      leaderboardEl.innerHTML = html;
     }
 
-    // --- Send winner to Discord webhook ---
-    function sendWinnerToDiscord() {
-      const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1378949615872901230/fXcBimVh4TFXZzEnfR4o_pcZuFm6B3ufO53pJJ0lAUG5X435BBP8BsLcRwOtzDcgJPK8/your_webhook_url_here"; // Replace with your webhook
-      // Always get the latest reports from localStorage
-      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
-      if (!records.length) return;
-
-      // Count submissions per user (by name)
-      const counts = {};
-      const details = {};
-      records.forEach(r => {
-        const name = r.name.trim();
-        counts[name] = (counts[name] || 0) + 1;
-        // Store the latest callsign and unit for the user
-        details[name] = { callsign: r.callsign, unit: r.unit };
-      });
-
-      // Find the user with the most submissions
-      let winner = null, max = 0;
-      for (const [name, count] of Object.entries(counts)) {
-        if (count > max) {
-          winner = name;
-          max = count;
-        }
-      }
-      if (!winner) return;
-
-      const winnerDetails = details[winner];
-      const msg =
-        `🏆 Nightwatch Winner: **${winner}**\n` +
-        `Callsign: **${winnerDetails.callsign}**\n` +
-        `Unit: **${winnerDetails.unit}**\n` +
-        `Submissions: **${max}**`;
-
-      fetch(DISCORD_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content: msg })
-      }).catch(() => {
-        // Optionally handle errors
-      });
-    }
-
-    renderTable(reports);
-
-    // --- Bouncing VicPol logo ---
     const dvdLogo = document.getElementById('dvd-logo');
     const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
     let dx = 1.5, dy = 1.5, x = 100, y = 100;
@@ -234,15 +169,10 @@
       x += dx;
       y += dy;
 
-      let hitEdge = false;
-      if (x + logoW >= screenW || x <= 0) {
-        dx *= -1;
-        hitEdge = true;
-      }
-      if (y + logoH >= screenH || y <= 0) {
-        dy *= -1;
-        hitEdge = true;
-      }
+      const hitEdge = x + logoW >= screenW || x <= 0 || y + logoH >= screenH || y <= 0;
+
+      if (x + logoW >= screenW || x <= 0) dx *= -1;
+      if (y + logoH >= screenH || y <= 0) dy *= -1;
 
       if (hitEdge) {
         const color = colors[Math.floor(Math.random() * colors.length)];
@@ -256,7 +186,7 @@
 
     window.addEventListener("DOMContentLoaded", () => {
       moveLogo();
-      updateLockStatus();
+      loadReports();
     });
   </script>
 </body>
