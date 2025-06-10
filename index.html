@@ -11,6 +11,7 @@
   <button class="admin-btn" onclick="showLogin()">Admin Login</button>
   <img src="vicpol.png" alt="VicPol Badge" id="dvd-logo" />
 
+  <!-- Admin Login Popup -->
   <div id="admin-login-popup" class="hidden">
     <div class="login-box">
       <h3>Admin Login</h3>
@@ -110,6 +111,25 @@
       document.getElementById("otherChargeText").classList.toggle("hidden", !checked);
     }
 
+    function showLogin() {
+      document.getElementById("admin-login-popup").classList.remove("hidden");
+    }
+
+    function hideLogin() {
+      document.getElementById("admin-login-popup").classList.add("hidden");
+      document.getElementById("admin-pass").value = '';
+    }
+
+    function verifyAdmin() {
+      const password = document.getElementById("admin-pass").value;
+      if (password === "nightwatch123") {
+        localStorage.setItem("isAdmin", "true");
+        window.location.href = "admin.html";
+      } else {
+        alert("Incorrect password.");
+      }
+    }
+
     document.getElementById("reportForm").addEventListener("submit", async function(e) {
       e.preventDefault();
 
@@ -137,7 +157,7 @@
 
       try {
         await db.collection("reports").add(entry);
-        alert("Thank you for your submission.");
+        alert("✅ Thank you for submitting your response.");
         e.target.reset();
         updateCallsigns();
         toggleOtherUnit();
@@ -146,6 +166,38 @@
         alert("Error saving report.");
         console.error(err);
       }
+    });
+
+    // DVD Bouncing Logo
+    const dvdLogo = document.getElementById('dvd-logo');
+    const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
+    let dx = 1.5, dy = 1.5, x = 100, y = 100;
+
+    function moveLogo() {
+      const screenW = window.innerWidth;
+      const screenH = window.innerHeight;
+      const logoW = dvdLogo.offsetWidth;
+      const logoH = dvdLogo.offsetHeight;
+      x += dx;
+      y += dy;
+
+      const hitEdge = x + logoW >= screenW || x <= 0 || y + logoH >= screenH || y <= 0;
+
+      if (x + logoW >= screenW || x <= 0) dx *= -1;
+      if (y + logoH >= screenH || y <= 0) dy *= -1;
+
+      if (hitEdge) {
+        const color = colors[Math.floor(Math.random() * colors.length)];
+        dvdLogo.style.filter = `drop-shadow(0 0 15px ${color})`;
+      }
+
+      dvdLogo.style.left = x + 'px';
+      dvdLogo.style.top = y + 'px';
+      requestAnimationFrame(moveLogo);
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      moveLogo();
     });
   </script>
 </body>
