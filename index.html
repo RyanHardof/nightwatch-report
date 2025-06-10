@@ -6,25 +6,6 @@
   <title>Operation Nightwatch - Report</title>
   <link rel="stylesheet" href="style.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
-  <style>
-    /* Style the Google Sign-In area to match your admin button */
-    .google-signin-container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      margin: 1em 0;
-    }
-    .google-signin-container .g_id_signin {
-      min-width: 220px;
-      margin-bottom: 1em;
-    }
-    /* Optional: visually match your admin-btn */
-    .google-signin-container .g_id_signin > div {
-      border-radius: 6px !important;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-      font-family: inherit;
-    }
-  </style>
 </head>
 <body>
   <button class="admin-btn" onclick="showLogin()">Admin Login</button>
@@ -48,7 +29,7 @@
 
     <form id="reportForm">
       <label for="name">Your Name</label>
-      <input type="text" id="name" required placeholder="Full name"/>
+      <input type="text" id="name" required />
 
       <label for="unit">Select Your Unit</label>
       <select id="unit" required onchange="toggleOtherUnit(); updateCallsigns();">
@@ -65,101 +46,84 @@
         <input type="text" id="otherUnit" placeholder="Enter your unit name"/>
       </div>
 
-      <label for="callsign">Your Callsign</label>
-      <input type="text" id="callsign" required list="callsign-options" placeholder="Start typing your callsign"/>
+      <label for="callsign">Callsign</label>
+      <input type="text" id="callsign" required list="callsign-options" />
       <datalist id="callsign-options"></datalist>
 
       <label for="reportId">Report ID</label>
-      <input type="text" id="reportId" required placeholder="Unique report ID"/>
+      <input type="text" id="reportId" required />
 
-      <label>Charges (select all that apply)</label>
+      <label>Charges</label>
       <div class="checkbox-group">
         <label><input type="checkbox" name="charges" value="Exceeding Speed"> Exceeding Speed</label>
         <label><input type="checkbox" name="charges" value="DUI"> DUI</label>
         <label><input type="checkbox" name="charges" value="Un-Roadworthy"> Un-Roadworthy</label>
-        <label><input type="checkbox" name="charges" value="Evade - Failure to stop when directed"> Evade - Failure to stop when directed</label>
+        <label><input type="checkbox" name="charges" value="Evade - Failure to stop when directed"> Evade</label>
         <label>
-          <input type="checkbox" id="otherChargeBox" name="charges" value="Other" onchange="toggleOtherCharge()">
-          Other
+          <input type="checkbox" id="otherChargeBox" value="Other" onchange="toggleOtherCharge()"> Other
         </label>
-        <input type="text" id="otherChargeText" class="hidden" placeholder="Enter custom charge(s)"/>
+        <input type="text" id="otherChargeText" class="hidden" placeholder="Enter custom charge"/>
       </div>
 
       <button type="submit">Submit Report</button>
     </form>
-    <div id="locked-message" class="hidden" style="text-align:center; font-size:1.2em; margin-top:2em;">
-      Thank you for being a part of Operation Nightwatch. It has come to an end.
-    </div>
   </div>
 
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore.js"></script>
+
   <script>
-    // --- CONFIGURATION ---
-    // Set cutoff date/time in AEST (UTC+10)
-    const AEST_CUTOFF = "2024-06-05T14:07:00+10:00"; // <-- Set your cutoff here
-    const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1378949615872901230/fXcBimVh4TFXZzEnfR4o_pcZuFm6B3ufO53pJJ0lAUG5X435BBP8BsLcRwOtzDcgJPK8/your_webhook_url_here"; // Replace with your webhook
+    const firebaseConfig = {
+      apiKey: "AIzaSyDxMzG3KNy-9r6o_3gRl89fRSF5UC_zwDE",
+      authDomain: "nightwatch-95d9e.firebaseapp.com",
+      projectId: "nightwatch-95d9e",
+      storageBucket: "nightwatch-95d9e.firebasestorage.app",
+      messagingSenderId: "333759908706",
+      appId: "1:333759908706:web:1f745e0329935447157a3b",
+      measurementId: "G-HSSE2TH61J"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
     const callsignSuggestions = {
-      "General Duties": ["300", "301", "303", "304", "313", "334", "350", "351", "370", "371", "372", "375"],
-      "Highway Patrol": ["700", "701", "702", "703", "704", "705"],
-      "CIU": ["500", "501", "503"],
-      "CIRT": ["900", "901", "902", "903", "905"]
+      "General Duties": ["300", "301", "303", "304", "313"],
+      "Highway Patrol": ["700", "701", "702"],
+      "CIU": ["500", "501"],
+      "CIRT": ["900", "901"]
     };
 
     function updateCallsigns() {
       const unit = document.getElementById("unit").value;
-      const datalist = document.getElementById("callsign-options");
       const options = callsignSuggestions[unit] || [];
-      datalist.innerHTML = options.map(cs => `<option value="${cs}">`).join('');
+      document.getElementById("callsign-options").innerHTML = options.map(cs => `<option value="${cs}">`).join('');
     }
 
     function toggleOtherUnit() {
-      const unit = document.getElementById("unit").value;
-      const wrapper = document.getElementById("other-unit-wrapper");
-      wrapper.classList.toggle("hidden", unit !== "Other");
+      const show = document.getElementById("unit").value === "Other";
+      document.getElementById("other-unit-wrapper").classList.toggle("hidden", !show);
     }
 
     function toggleOtherCharge() {
-      const isChecked = document.getElementById("otherChargeBox").checked;
-      document.getElementById("otherChargeText").classList.toggle("hidden", !isChecked);
+      const checked = document.getElementById("otherChargeBox").checked;
+      document.getElementById("otherChargeText").classList.toggle("hidden", !checked);
     }
 
-    function showLogin() {
-      document.getElementById("admin-login-popup").classList.remove("hidden");
-    }
-
-    function hideLogin() {
-      document.getElementById("admin-login-popup").classList.add("hidden");
-      document.getElementById("admin-pass").value = '';
-    }
-
-    function verifyAdmin() {
-      const password = document.getElementById("admin-pass").value;
-      if (password === "nightwatch123") {
-        localStorage.setItem("isAdmin", "true");
-        window.location.href = "admin.html";
-      } else {
-        alert("Incorrect password.");
-      }
-    }
-
-    document.getElementById("reportForm").addEventListener("submit", function(e) {
-      if (localStorage.getItem("nightwatchLocked") === "true") {
-        alert("Submissions are currently locked by admin.");
-        e.preventDefault();
-        return;
-      }
+    document.getElementById("reportForm").addEventListener("submit", async function(e) {
+      e.preventDefault();
 
       let unit = document.getElementById("unit").value;
       if (unit === "Other") {
-        const other = document.getElementById("otherUnit").value.trim();
-        unit = other ? `Other (${other})` : "Other";
+        const custom = document.getElementById("otherUnit").value.trim();
+        unit = custom ? `Other (${custom})` : "Other";
       }
 
-      let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked')).map(cb => cb.value);
-      const custom = document.getElementById("otherChargeText").value.trim();
-      if (charges.includes("Other") && custom) {
+      let charges = Array.from(document.querySelectorAll('input[name="charges"]:checked')).map(c => c.value);
+      const otherCharge = document.getElementById("otherChargeText").value.trim();
+      if (charges.includes("Other") && otherCharge) {
         charges = charges.filter(c => c !== "Other");
-        charges.push(custom);
+        charges.push(otherCharge);
       }
 
       const entry = {
@@ -167,114 +131,21 @@
         unit,
         callsign: document.getElementById("callsign").value,
         reportId: document.getElementById("reportId").value,
-        charges: charges.join(", ")
+        charges: charges.join(", "),
+        timestamp: new Date()
       };
 
-      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
-      records.push(entry);
-      localStorage.setItem("nightwatchReports", JSON.stringify(records));
-      alert("Thank you for your submission.");
-      e.target.reset();
-      updateCallsigns();
-      toggleOtherUnit();
-      toggleOtherCharge();
-    });
-
-    function checkSubmissionLock() {
-      const locked = localStorage.getItem("nightwatchLocked") === "true";
-      const form = document.getElementById("reportForm");
-      const msg = document.getElementById("locked-message");
-      if (locked) {
-        form.style.display = "none";
-        msg.classList.remove("hidden");
-      } else {
-        form.style.display = "";
-        msg.classList.add("hidden");
+      try {
+        await db.collection("reports").add(entry);
+        alert("Thank you for your submission.");
+        e.target.reset();
+        updateCallsigns();
+        toggleOtherUnit();
+        toggleOtherCharge();
+      } catch (err) {
+        alert("Error saving report.");
+        console.error(err);
       }
-    }
-
-    // --- WINNER ANNOUNCEMENT LOGIC ---
-    function announceWinnerIfDue() {
-      // Use the cutoff as an absolute time with offset, compare to now
-      const now = new Date();
-      const cutoff = new Date(AEST_CUTOFF);
-
-      if (now < cutoff) return;
-
-      // Prevent duplicate announcements
-      if (localStorage.getItem("nightwatchWinnerAnnounced")) return;
-
-      const records = JSON.parse(localStorage.getItem("nightwatchReports") || "[]");
-      if (!records.length) return;
-
-      // Count submissions per user (by name)
-      const counts = {};
-      records.forEach(r => {
-        const name = r.name.trim();
-        counts[name] = (counts[name] || 0) + 1;
-      });
-
-      // Find the user with the most submissions
-      let winner = null, max = 0;
-      for (const [name, count] of Object.entries(counts)) {
-        if (count > max) {
-          winner = name;
-          max = count;
-        }
-      }
-
-      if (!winner) return;
-
-      // Send to Discord webhook
-      fetch(DISCORD_WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content: `🏆 Nightwatch Winner: **${winner}** with **${max}** submissions!`
-        })
-      }).then(() => {
-        localStorage.setItem("nightwatchWinnerAnnounced", "true");
-      }).catch(() => {
-        // Optionally handle errors
-      });
-    }
-
-    const dvdLogo = document.getElementById('dvd-logo');
-    const colors = ['#00ffff', '#ff00ff', '#ffff00', '#00ff88', '#ff6600'];
-    let dx = 1.5, dy = 1.5, x = 100, y = 100;
-
-    function moveLogo() {
-      const screenW = window.innerWidth;
-      const screenH = window.innerHeight;
-      const logoW = dvdLogo.offsetWidth;
-      const logoH = dvdLogo.offsetHeight;
-      x += dx;
-      y += dy;
-
-      const atCorner =
-        (x <= 0 || x + logoW >= screenW) &&
-        (y <= 0 || y + logoH >= screenH);
-
-      const hitEdge = x + logoW >= screenW || x <= 0 || y + logoH >= screenH || y <= 0;
-
-      if (x + logoW >= screenW || x <= 0) dx *= -1;
-      if (y + logoH >= screenH || y <= 0) dy *= -1;
-
-      if (hitEdge) {
-        dvdLogo.style.filter = atCorner
-          ? `drop-shadow(0 0 30px gold)`
-          : `drop-shadow(0 0 15px ${colors[Math.floor(Math.random() * colors.length)]})`;
-      }
-
-      dvdLogo.style.left = x + 'px';
-      dvdLogo.style.top = y + 'px';
-      requestAnimationFrame(moveLogo);
-    }
-
-    window.addEventListener("DOMContentLoaded", () => {
-      moveLogo();
-      announceWinnerIfDue();
-      checkSubmissionLock();
     });
   </script>
 </body>
